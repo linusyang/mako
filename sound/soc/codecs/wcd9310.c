@@ -8417,7 +8417,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	fauxsound_codec_ptr = codec;
 #endif
 
-tabla registries. This will fix the breakage caused by 4.3.
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	control = codec->control_data;
 
