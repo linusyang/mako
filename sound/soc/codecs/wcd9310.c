@@ -8375,49 +8375,6 @@ static const struct file_operations codec_mbhc_debug_ops = {
 };
 #endif
 
-#ifdef CONFIG_SOUND_CONTROL
-
-#define HEADSET_MAX_DEFAULT 12
-#define HEADSET_MIN_DEFAULT 0
-#define HEADPHONES_MAX_DEFAULT 40
-#define HEADPHONES_MIN_DEFAULT -84
-
-struct snd_kcontrol_new *kcontrol = (struct snd_kcontrol_new *) tabla_snd_controls;
-struct soc_mixer_control *left_mixer, *right_mixer, *left_headset_mixer, *right_headset_mixer;
-
-void update_headphones_volume_boost(int vol_boost)
-{
-	left_mixer = (struct soc_mixer_control *) kcontrol[8].private_value;
-	right_mixer = (struct soc_mixer_control *) kcontrol[9].private_value;
-
-	left_mixer->platform_max = HEADPHONES_MAX_DEFAULT + vol_boost;
-	left_mixer->max = HEADPHONES_MAX_DEFAULT + vol_boost;
-	left_mixer->min = HEADPHONES_MIN_DEFAULT + vol_boost;
-	pr_info("Left headphone max: %d - Left headphone min: %d\n", left_mixer->max, left_mixer->min);
-
-	right_mixer->platform_max = HEADPHONES_MAX_DEFAULT + vol_boost;
-	right_mixer->max = HEADPHONES_MAX_DEFAULT  + vol_boost;
-	right_mixer->min = HEADPHONES_MIN_DEFAULT + vol_boost;
-	pr_info("Right headphone max: %d - Right headphone min: %d\n", right_mixer->max, right_mixer->min);
-}
-
-void update_headset_volume_boost(int vol_boost)
-{
-	left_headset_mixer = (struct soc_mixer_control *) kcontrol[6].private_value;
-	right_headset_mixer = (struct soc_mixer_control *) kcontrol[7].private_value;
-
-	right_headset_mixer->platform_max = HEADSET_MAX_DEFAULT + vol_boost;
-	right_headset_mixer->max = HEADSET_MAX_DEFAULT + vol_boost;
-	right_headset_mixer->min = HEADSET_MIN_DEFAULT + vol_boost;
-	pr_info("Right headset max: %d - Right headset min: %d\n", right_headset_mixer->max, right_headset_mixer->min);
-
-	left_headset_mixer->platform_max = HEADSET_MAX_DEFAULT + vol_boost;
-	left_headset_mixer->max = HEADSET_MAX_DEFAULT + vol_boost;
-	left_headset_mixer->min = HEADSET_MIN_DEFAULT + vol_boost;
-	pr_info("Left headset max: %d - Left headset min: %d\n", left_headset_mixer->max, left_headset_mixer->min);
-}
-#endif
-
 #ifdef CONFIG_SOUND_CONTROL_HAX_GPL
 struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
 		(struct snd_kcontrol_new *)tabla_snd_controls;
