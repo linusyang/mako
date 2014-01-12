@@ -26,7 +26,7 @@
 #include <linux/time.h>
 #include <linux/hotplug.h>
 
-#define MIM_TIME_INTERVAL_MS 100
+#define MIM_TIME_INTERVAL_MS 10
 
 /* extern */
 bool is_touching;
@@ -59,9 +59,9 @@ static void boost_input_event(struct input_handle *handle,
 	{
 		queue_work_on(0, input_boost_wq, &input_boost_work);
 		gpu_idle = false;
+		is_touching = true;
 	}
-
-	is_touching = true;
+	idle_counter = -10;
 	freq_boosted_time = time_stamp = now;
 }
 
