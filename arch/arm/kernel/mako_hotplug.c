@@ -51,7 +51,7 @@ static unsigned int hotplug_val[GPU_STATE][ACTIVE_CORES][TUNABLES] =
 	/* gpu busy */
 	{0, 60},
 	{30, 60},
-	{30, 70},
+	{30, 65},
 	{40, 100} 
 }};
 
