@@ -51,13 +51,6 @@ static int is_pressure;
 static int is_width_major;
 static int is_width_minor;
 
-/* extern vars */
-bool is_touching;
-u64 freq_boosted_time;
-unsigned long time_stamp;
-
-void touchboost_func(void);
-
 bool suspended = false;
 
 bool doubletap_to_wake = false;
@@ -826,22 +819,13 @@ void wake_up_display(struct input_dev *input_dev)
 /*
  * Touch work function
  */
-static void __ref touch_work_func(struct work_struct *work)
+static void touch_work_func(struct work_struct *work)
 {
 	struct lge_touch_data *ts =
 			container_of(work, struct lge_touch_data, work);
 	int int_pin = 0;
 	int next_work = 0;
 	int ret;
-
-	if (!is_touching)
-	{
-		gpu_idle = false;
-		touchboost_func();
-	}
-
-    is_touching = true;
-	freq_boosted_time = time_stamp = ktime_to_ms(ktime_get());
     
 	if (suspended && doubletap_to_wake)
 	{
