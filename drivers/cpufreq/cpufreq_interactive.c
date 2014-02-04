@@ -125,7 +125,7 @@ boost_values = {
 };
 
 /* Duration of a boot pulse in usecs */
-u64 boostpulse_duration_val = (1500 * USEC_PER_MSEC);
+u64 boostpulse_duration_val = 1500;
 
 /* End time of boost pulse */
 u64 boostpulse_endtime;
