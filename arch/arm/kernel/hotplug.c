@@ -10,7 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Simple no bullshit hot[un]plug driver for SMP
+ * Simple hot[un]plug driver for SMP
  *
  * rewritten by Patrick Dittrich <patrick90vhm@gmail.com>
  */
@@ -33,7 +33,7 @@
 #define DEFAULT_SUSPEND_FREQ 702000
 #define DEFAULT_CORES_ON_TOUCH 2
 #define DEFAULT_COUNTER 50
-#define BOOST_THRESHOLD 3000
+#define BOOST_TIME 3000
 
 //#define DEBUG
 
@@ -65,7 +65,7 @@ struct cpu_load_data {
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
 
 static unsigned int cores_on_touch = DEFAULT_CORES_ON_TOUCH;
-static u64 now, time_stamp;
+static u64 now, coreboost_endtime;
 static short first_counter = 0;
 static short third_counter = 0;
 
@@ -88,7 +88,8 @@ static inline int get_cpu_load(unsigned int cpu)
 
 	cpufreq_get_policy(&policy, cpu);
 	
-	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time, gpu_idle ? 0 : 1);
+	cur_idle_time = get_cpu_idle_time(cpu, &cur_wall_time,
+						gpu_idle ? 0 : 1);
 
 	wall_time = (unsigned int) (cur_wall_time - pcpu->prev_cpu_wall);
 	pcpu->prev_cpu_wall = cur_wall_time;
@@ -134,19 +135,31 @@ static void __ref online_core(unsigned short cpus_num)
 		}
 	}
 	
+	coreboost_endtime = now + BOOST_TIME;
 	first_counter = 0;
 	third_counter = -DEFAULT_COUNTER;
 	
 	return;
 }
 
-static void __ref offline_core(unsigned int cpu)
+static void __ref offline_core(unsigned short cpus_num)
 {   
-	if (!cpu)
+	unsigned int cpu;
+
+	if (cpus_num == 1 || (cpus_num == cores_on_touch
+				&& coreboost_endtime > now))
 		return;
 	
-	cpu_down(cpu);
+	for (cpu = 3; cpu; cpu--)
+	{
+		if (cpu_online(cpu)) 
+		{
+			cpu_down(cpu);
+			break;
+		}
+	}
 	
+	coreboost_endtime = now + BOOST_TIME;
 	first_counter = 0;
 	third_counter = 0;
 	
@@ -165,10 +178,8 @@ unsigned int scale_third_level(unsigned int online_cpus)
 
 static void __ref decide_hotplug_func(struct work_struct *work)
 {
-	unsigned int cpu, lowest_cpu = 0;
-	unsigned int load, av_load = 0, lowest_cpu_load = 100;
-	unsigned short online_cpus;
-	unsigned short up_val, down_val;
+	unsigned int cpu, load, av_load = 0;
+	unsigned short online_cpus, up_val, down_val;
 
 #ifdef DEBUG
 	short load_array[4] = {};
@@ -182,19 +193,11 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	for_each_online_cpu(cpu) 
 	{
 		load = get_cpu_load(cpu);
+		av_load += load;
 		
 #ifdef DEBUG
 		load_array[cpu] = load;
 #endif		
-		
-		if (load < lowest_cpu_load && cpu && !(online_cpus == 
-			cores_on_touch && now - time_stamp < BOOST_THRESHOLD))
-		{
-			lowest_cpu = cpu;
-			lowest_cpu_load = load;
-		}
-		
-		av_load += load;
 	}
 
 	av_load = av_load / online_cpus;
@@ -204,7 +207,8 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 		up_val = 3;
 		down_val = 6;
 	}
-	else if (boostpulse_endtime > now && online_cpus < cores_on_touch)
+	else if (boostpulse_endtime > now 
+		&& online_cpus < cores_on_touch)
 	{
 		up_val = 15;
 		down_val = 7;		
@@ -217,7 +221,7 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 
 	if (av_load >= scale_first_level(online_cpus))
 	{
-		time_stamp = now;
+		coreboost_endtime = now + BOOST_TIME;
 
 		if (first_counter < DEFAULT_COUNTER)
 			first_counter += up_val;
@@ -237,11 +241,12 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 			first_counter -= down_val;
 			
 		if (third_counter >= DEFAULT_COUNTER)
-			offline_core(lowest_cpu);	
+			offline_core(online_cpus);	
 	}
 	else
 	{
-		time_stamp = now;
+		if (now + (BOOST_TIME / 2) > coreboost_endtime)
+			coreboost_endtime = now + BOOST_TIME / 2; 
 
 		if (first_counter > 0)
 			first_counter -= down_val;
@@ -322,7 +327,7 @@ static void __ref resume_func(struct work_struct *work)
 	idle_counter = 0;
 	gpu_idle = false;
 
-	time_stamp = now;
+	coreboost_endtime = now + BOOST_TIME;
 	boostpulse_endtime = now + boostpulse_duration_val;
 
 	for_each_possible_cpu(cpu) 

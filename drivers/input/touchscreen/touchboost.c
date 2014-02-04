@@ -28,9 +28,6 @@
 
 #define MIM_TIME_INTERVAL_MS 10
 
-/* extern */
-u64 time_stamp;
-
 static u64 touch_time_stamp;
 
 static void boost_input_event(struct input_handle *handle,
