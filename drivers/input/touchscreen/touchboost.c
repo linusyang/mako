@@ -29,40 +29,23 @@
 #define MIM_TIME_INTERVAL_MS 10
 
 /* extern */
-bool is_touching;
-unsigned long freq_boosted_time;
-unsigned long time_stamp;
+u64 time_stamp;
 
-void touchboost_func(void);
-unsigned int get_input_boost_freq(void);
-
-static struct workqueue_struct *input_boost_wq;
-static struct work_struct input_boost_work;
-
-static void do_input_boost(struct work_struct *work)
-{
-	touchboost_func();
-}
+static u64 touch_time_stamp;
 
 static void boost_input_event(struct input_handle *handle,
                 unsigned int type, unsigned int code, int value)
 {
-	unsigned long now = ktime_to_ms(ktime_get());
+	u64 now = ktime_to_ms(ktime_get());
 
-	if (now - freq_boosted_time < MIM_TIME_INTERVAL_MS)
+	if (now - touch_time_stamp < MIM_TIME_INTERVAL_MS)
 		return;
 
-	if (work_pending(&input_boost_work))
-		return;
-	
-	if (!is_touching)
-	{
-		queue_work_on(0, input_boost_wq, &input_boost_work);
-		gpu_idle = false;
-		is_touching = true;
-	}
-	idle_counter = -10;
-	freq_boosted_time = time_stamp = now;
+	if (boostpulse_duration_val > 50)
+		idle_counter = 0;
+
+	touch_time_stamp = now;
+	boostpulse_endtime = now + boostpulse_duration_val;
 }
 
 static int boost_input_connect(struct input_handler *handler,
@@ -131,13 +114,6 @@ static struct input_handler boost_input_handler = {
 #pragma GCC diagnostic ignored "-Wunused-result"
 static int init(void)
 {
-	input_boost_wq = alloc_workqueue("input_boost_wq", WQ_FREEZABLE | WQ_HIGHPRI, 0);
-
-	if (!input_boost_wq)
-		return -EFAULT;
-
-	INIT_WORK(&input_boost_work, do_input_boost);
-
 	input_register_handler(&boost_input_handler);
 	return 0;
 }
